@@ -1,6 +1,14 @@
 #include "stdafx.h"
 #include <Commdlg.h>
 #include "IAsyncOperationHelper.h"
+#include <iostream>
+#include <stdio.h>
+#include <string.h>
+
+// high resolution clock code
+#include <ctime>
+#include <ratio>
+#include <chrono>
 
 using namespace ABI::Windows::Foundation;
 using namespace ABI::Windows::Storage::Streams;
@@ -8,6 +16,8 @@ using namespace ABI::Windows::Web::UI;
 using namespace ABI::Windows::Web::UI::Interop;
 using namespace Microsoft::WRL;
 using namespace Microsoft::WRL::Wrappers;
+
+using namespace std::chrono;
 
 void CheckFailure(_In_ HRESULT hr)
 {
@@ -100,6 +110,8 @@ void App::ConfigureAddressBar()
 
 void App::InitializeWin32WebView(bool async)
 {
+    high_resolution_clock::time_point before_webview_creation = high_resolution_clock::now();
+
     // Use default options if options weren't set on the App during App::RunNewInstance
     if (!m_processOptions)
     {
@@ -120,11 +132,16 @@ void App::InitializeWin32WebView(bool async)
         &createWebViewAsyncOperation));
 
     if (async) {
-        HRESULT hr = createWebViewAsyncOperation->put_Completed(Callback<IAsyncOperationCompletedHandler<WebViewControl*>>([this, createWebViewAsyncOperation](IAsyncOperation<WebViewControl*>*, AsyncStatus status) -> HRESULT
+        HRESULT hr = createWebViewAsyncOperation->put_Completed(Callback<IAsyncOperationCompletedHandler<WebViewControl*>>([this, createWebViewAsyncOperation, before_webview_creation](IAsyncOperation<WebViewControl*>*, AsyncStatus status) -> HRESULT
         {
+            high_resolution_clock::time_point after_webview_creation = high_resolution_clock::now();
+
+            duration<double> webview_creation = duration_cast<duration<double>>(after_webview_creation - before_webview_creation);
+            std::cout << "\"" << webview_creation.count() << "\"";
+
             CheckFailure(createWebViewAsyncOperation->GetResults(&m_webViewControl));
             ConfigureAddressBar();
-            NavigateToUri(L"https://www.bing.com/");
+            NavigateToUri(L"https://www.example.com/");
 
             return S_OK;
         }).Get());
@@ -134,7 +151,7 @@ void App::InitializeWin32WebView(bool async)
     {
         CheckFailure(AsyncOpHelpers::WaitForCompletionAndGetResults(createWebViewAsyncOperation.Get(), m_webViewControl.ReleaseAndGetAddressOf()));
         ConfigureAddressBar();
-        NavigateToUri(L"https://www.bing.com/");
+        NavigateToUri(L"https://www.example.com/");
     }
 }
 
@@ -212,10 +229,27 @@ void App::ToggleVisibility()
 }
 
 void App::NavigateToUri(_In_ LPCWSTR uriAsString)
+// void App::NavigateToUri(_In_ LPWSTR uriAsString)
 {
     ComPtr<IUriRuntimeClass> uri = CreateWinRtUri(uriAsString, true);
     if (uri != nullptr)
     {
+        high_resolution_clock::time_point navigation_starting = high_resolution_clock::now();
         CheckFailure(m_webViewControl->Navigate(uri.Get()));
+        
+        EventRegistrationToken token = { 0 };
+        HRESULT hr = m_webViewControl->add_NavigationCompleted(Callback<ITypedEventHandler<IWebViewControl*, WebViewControlNavigationCompletedEventArgs*>>(
+            [this, navigation_starting](IWebViewControl* webViewControl, IWebViewControlNavigationCompletedEventArgs* args) -> HRESULT
+        {
+            high_resolution_clock::time_point navigation_completed = high_resolution_clock::now();
+            duration<double> navigation = duration_cast<duration<double>>(navigation_completed - navigation_starting);
+            std::cout << ",\"" << navigation.count() << "\"" << std::endl;
+
+            DestroyWindow(m_hwnd);
+            exit(0);
+
+            return S_OK;
+        }).Get(), &token);
+        CheckFailure(hr);
     }
 }
