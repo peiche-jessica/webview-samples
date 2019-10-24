@@ -141,7 +141,7 @@ void App::InitializeWin32WebView(bool async)
 
             CheckFailure(createWebViewAsyncOperation->GetResults(&m_webViewControl));
             ConfigureAddressBar();
-            NavigateToUri(L"https://www.example.com/");
+            NavigateToUri(m_initialUri);
 
             return S_OK;
         }).Get());
@@ -151,7 +151,7 @@ void App::InitializeWin32WebView(bool async)
     {
         CheckFailure(AsyncOpHelpers::WaitForCompletionAndGetResults(createWebViewAsyncOperation.Get(), m_webViewControl.ReleaseAndGetAddressOf()));
         ConfigureAddressBar();
-        NavigateToUri(L"https://www.example.com/");
+        NavigateToUri(m_initialUri);
     }
 }
 
@@ -229,7 +229,6 @@ void App::ToggleVisibility()
 }
 
 void App::NavigateToUri(_In_ LPCWSTR uriAsString)
-// void App::NavigateToUri(_In_ LPWSTR uriAsString)
 {
     ComPtr<IUriRuntimeClass> uri = CreateWinRtUri(uriAsString, true);
     if (uri != nullptr)
@@ -244,9 +243,6 @@ void App::NavigateToUri(_In_ LPCWSTR uriAsString)
             high_resolution_clock::time_point navigation_completed = high_resolution_clock::now();
             duration<double> navigation = duration_cast<duration<double>>(navigation_completed - navigation_starting);
             std::cout << ",\"" << navigation.count() << "\"" << std::endl;
-
-            DestroyWindow(m_hwnd);
-            exit(0);
 
             return S_OK;
         }).Get(), &token);
