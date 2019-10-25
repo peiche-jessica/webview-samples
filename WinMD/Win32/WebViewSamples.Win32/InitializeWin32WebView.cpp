@@ -141,7 +141,7 @@ void App::InitializeWin32WebView(bool async)
 
             CheckFailure(createWebViewAsyncOperation->GetResults(&m_webViewControl));
             ConfigureAddressBar();
-            NavigateToUri(m_initialUri);
+            NavigateToUri(m_initialUri.c_str());
 
             return S_OK;
         }).Get());
@@ -151,7 +151,7 @@ void App::InitializeWin32WebView(bool async)
     {
         CheckFailure(AsyncOpHelpers::WaitForCompletionAndGetResults(createWebViewAsyncOperation.Get(), m_webViewControl.ReleaseAndGetAddressOf()));
         ConfigureAddressBar();
-        NavigateToUri(m_initialUri);
+        NavigateToUri(m_initialUri.c_str());
     }
 }
 
